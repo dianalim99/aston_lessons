@@ -11,5 +11,5 @@ public interface MainRepositiry<T, K> {
 
     T save(T t);
 
-    void update(T t);
+    T update(T t);
 }

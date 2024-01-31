@@ -7,4 +7,5 @@ import java.sql.SQLException;
 
 public interface StudentResultSetMapper {
     StudentEntity map(ResultSet resultSet) throws SQLException;
+    StudentEntity map(String prefix, ResultSet resultSet) throws SQLException;
 }

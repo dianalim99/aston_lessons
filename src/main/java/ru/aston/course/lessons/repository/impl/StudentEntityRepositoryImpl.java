@@ -23,14 +23,12 @@ public class StudentEntityRepositoryImpl implements StudentEntityRepository {
     private final ConnectionManager connectionManager = ConnectionManagerImpl.getInstance();
 
     private StudentEntityRepositoryImpl() {
-
     }
 
     @Override
     public StudentEntity findById(Long id) {
         try (Connection connection = connectionManager.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(SQL_SELECT_BY_ID)) {
-            ;
             preparedStatement.setLong(1, id);
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
@@ -42,11 +40,6 @@ public class StudentEntityRepositoryImpl implements StudentEntityRepository {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @Override
-    public boolean deleteById(Long id) {
-        return false;
     }
 
     @Override
@@ -67,6 +60,10 @@ public class StudentEntityRepositoryImpl implements StudentEntityRepository {
         }
     }
 
+    @Override
+    public boolean deleteById(Long id) {
+        return false;
+    }
 
     @Override
     public StudentEntity save(StudentEntity studentEntity) {
@@ -74,8 +71,8 @@ public class StudentEntityRepositoryImpl implements StudentEntityRepository {
     }
 
     @Override
-    public void update(StudentEntity studentEntity) {
-
+    public StudentEntity update(StudentEntity studentEntity) {
+        return null;
     }
 
     public static StudentEntityRepositoryImpl getInstance() {

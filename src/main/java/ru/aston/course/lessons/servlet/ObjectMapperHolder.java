@@ -6,7 +6,8 @@ import ru.aston.course.lessons.repository.impl.StudentEntityRepositoryImpl;
 
 public class ObjectMapperHolder {
     private static final ObjectMapper INSTANCE = new ObjectMapper()
-            .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING);
+            .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     private ObjectMapperHolder() {
     }
