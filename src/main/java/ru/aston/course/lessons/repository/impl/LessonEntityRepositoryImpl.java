@@ -47,7 +47,9 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
             "WHERE lesson.id = ?";
     private static final String SQL_SELECT_BY_DATE = "SELECT * FROM lesson WHERE date = ?";
     private static final String SQL_INSERT = "INSERT INTO lesson (id_teacher, date) values (?,?)";
-    private static final String SQL_DELETE_BY_ID = "DELETE FROM lesson WHERE id = ?";
+    private static final String SQL_INSERT_STUDENT = "INSERT INTO lesson_to_student (id_lesson, id_student) values (?,?);";
+    private static final String SQL_DELETE_BY_ID = "DELETE FROM lesson_to_student WHERE id_lesson = ?;\n" +
+            "DELETE FROM lesson WHERE id = ?;\n";
     private static final String SQL_UPDATE_BY_ID = "UPDATE lesson SET id_teacher = ?, date = ? WHERE id = ?";
 
     private LessonResultSetMapper resultSetMapper = new LessonResultSetMapperImpl();
@@ -86,6 +88,7 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
         try (Connection connection = connectionManager.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(SQL_DELETE_BY_ID)) {
             preparedStatement.setLong(1, id);
+            preparedStatement.setLong(2, id);
             int rowsAffected = preparedStatement.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -127,7 +130,8 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
     @Override
     public LessonEntity save(LessonEntity lessonEntity) {
         try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(SQL_INSERT, new String[]{"id"})) {
+             PreparedStatement preparedStatement = connection.prepareStatement(SQL_INSERT, new String[]{"id"});
+             PreparedStatement preparedStatementStudent = connection.prepareStatement(SQL_INSERT_STUDENT);) {
             preparedStatement.setLong(1, lessonEntity.getIdTeacher());
             preparedStatement.setTimestamp(2, lessonEntity.getDate());
             preparedStatement.executeUpdate();
@@ -135,11 +139,16 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
                 if (generatedKeys.next()) {
                     long id = generatedKeys.getLong(1);
                     lessonEntity.setId(id);
+                    for (StudentEntity studentEntity : lessonEntity.getStudents()) {
+                        preparedStatementStudent.setLong(1, lessonEntity.getId());
+                        preparedStatementStudent.setLong(2, studentEntity.getId());
+                        preparedStatementStudent.executeUpdate();
+                    }
                 } else {
                     throw new SQLException("Failed to get the generated key.");
                 }
             }
-            return lessonEntity;
+            return findById(lessonEntity.getId());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

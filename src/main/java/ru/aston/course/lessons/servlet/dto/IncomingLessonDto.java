@@ -1,11 +1,13 @@
 package ru.aston.course.lessons.servlet.dto;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 public class IncomingLessonDto {
     private Long id;
     private Long idTeacher;
     private Timestamp date;
+    private List<Long> studentIds;
 
     public Long getId() {
         return id;
@@ -31,4 +33,11 @@ public class IncomingLessonDto {
         this.date = date;
     }
 
+    public List<Long> getStudentIds() {
+        return studentIds;
+    }
+
+    public void setStudentIds(List<Long> studentIds) {
+        this.studentIds = studentIds;
+    }
 }
