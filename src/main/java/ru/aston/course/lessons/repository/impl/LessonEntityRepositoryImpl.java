@@ -30,8 +30,8 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
             "       last_name  student_last_name,\n" +
             "       grade      student_grade\n" +
             "FROM lesson\n" +
-            "         JOIN lesson_to_student ON lesson.id = lesson_to_student.id_lesson\n" +
-            "         JOIN student ON student.id = lesson_to_student.id_student\n";
+            "         LEFT JOIN lesson_to_student ON lesson.id = lesson_to_student.id_lesson\n" +
+            "         LEFT JOIN student ON student.id = lesson_to_student.id_student\n";
     private static final String SQL_SELECT_BY_ID = "SELECT lesson.id,\n" +
             "       id_teacher,\n" +
             "       date,\n" +
@@ -42,15 +42,16 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
             "       last_name  student_last_name,\n" +
             "       grade      student_grade\n" +
             "FROM lesson\n" +
-            "         JOIN lesson_to_student ON lesson.id = lesson_to_student.id_lesson\n" +
-            "         JOIN student ON student.id = lesson_to_student.id_student\n" +
+            "         LEFT JOIN lesson_to_student ON lesson.id = lesson_to_student.id_lesson\n" +
+            "         LEFT JOIN student ON student.id = lesson_to_student.id_student\n" +
             "WHERE lesson.id = ?";
     private static final String SQL_SELECT_BY_DATE = "SELECT * FROM lesson WHERE date = ?";
     private static final String SQL_INSERT = "INSERT INTO lesson (id_teacher, date) values (?,?)";
     private static final String SQL_INSERT_STUDENT = "INSERT INTO lesson_to_student (id_lesson, id_student) values (?,?);";
     private static final String SQL_DELETE_BY_ID = "DELETE FROM lesson_to_student WHERE id_lesson = ?;\n" +
             "DELETE FROM lesson WHERE id = ?;\n";
-    private static final String SQL_UPDATE_BY_ID = "UPDATE lesson SET id_teacher = ?, date = ? WHERE id = ?";
+    private static final String SQL_UPDATE_BY_ID = "UPDATE lesson SET id_teacher = ?, date = ? WHERE id = ?;\n" +
+            "DELETE from lesson_to_student WHERE id_lesson = ?;\n";
 
     private LessonResultSetMapper resultSetMapper = new LessonResultSetMapperImpl();
     private StudentResultSetMapper resultSetMapperStudent = new StudentResultSetMapperImpl();
@@ -70,8 +71,10 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
             if (resultSet.next()) {
                 lesson = resultSetMapper.map(resultSet);
                 do {
-                    StudentEntity student = resultSetMapperStudent.map("student_", resultSet);
-                    lesson.getStudents().add(student);
+                    if (resultSet.getLong("student_id") != 0) {
+                        StudentEntity student = resultSetMapperStudent.map("student_", resultSet);
+                        lesson.getStudents().add(student);
+                    }
                 } while (resultSet.next());
                 return lesson;
             } else {
@@ -105,17 +108,21 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
             while (resultSet.next()) {
                 Long resultSetId = resultSet.getLong("id");
                 if (lessons.stream().anyMatch(lesson -> Objects.equals(lesson.getId(), resultSetId))) {
-                    StudentEntity student = resultSetMapperStudent.map("student_", resultSet);
-                    var existingLesson = lessons
-                            .stream()
-                            .filter(lesson -> Objects.equals(lesson.getId(), resultSetId))
-                            .findFirst()
-                            .get();
-                    existingLesson.getStudents().add(student);
+                    if (resultSet.getLong("student_id") != 0) {
+                        StudentEntity student = resultSetMapperStudent.map("student_", resultSet);
+                        LessonEntity existingLesson = lessons
+                                .stream()
+                                .filter(lesson -> Objects.equals(lesson.getId(), resultSetId))
+                                .findFirst()
+                                .get();
+                        existingLesson.getStudents().add(student);
+                    }
                 } else {
                     LessonEntity lesson = resultSetMapper.map(resultSet);
-                    StudentEntity student = resultSetMapperStudent.map("student_", resultSet);
-                    lesson.getStudents().add(student);
+                    if (resultSet.getLong("student_id") != 0) {
+                        StudentEntity student = resultSetMapperStudent.map("student_", resultSet);
+                        lesson.getStudents().add(student);
+                    }
                     lessons.add(lesson);
                 }
 
@@ -157,11 +164,20 @@ public class LessonEntityRepositoryImpl implements LessonEntityRepository {
     @Override
     public LessonEntity update(LessonEntity lessonEntity) {
         try (Connection connection = connectionManager.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(SQL_UPDATE_BY_ID)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(SQL_UPDATE_BY_ID);
+             PreparedStatement preparedStatementStudent = connection.prepareStatement(SQL_INSERT_STUDENT);) {
+
             preparedStatement.setLong(3, lessonEntity.getId());
+            preparedStatement.setLong(4, lessonEntity.getId());
             preparedStatement.setLong(1, lessonEntity.getIdTeacher());
             preparedStatement.setTimestamp(2, lessonEntity.getDate());
             preparedStatement.executeUpdate();
+
+            for (StudentEntity studentEntity : lessonEntity.getStudents()) {
+                preparedStatementStudent.setLong(1, lessonEntity.getId());
+                preparedStatementStudent.setLong(2, studentEntity.getId());
+                preparedStatementStudent.executeUpdate();
+            }
             return findById(lessonEntity.getId());
         } catch (SQLException e) {
             throw new RuntimeException(e);
